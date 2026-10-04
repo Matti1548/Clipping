@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Demo zonder Whisper/API: testvideo + nagemaakt transcript met pauzes."""
-import json
+"""Demo zonder Whisper/API: testvideo met bewegende 'spreker' + nagemaakt Engels transcript."""
 import subprocess
 import sys
 from pathlib import Path
@@ -8,29 +7,34 @@ from pathlib import Path
 from autoclip.config import load_config
 from autoclip.models import Highlight, Word
 from autoclip.pipeline import make_clip
+from autoclip.profiles import apply_profile
 
 out = Path(sys.argv[1] if len(sys.argv) > 1 else "demo_output")
 out.mkdir(exist_ok=True)
 src = out / "bron.mp4"
-subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=s=1280x720:d=30:r=25",
-                "-f", "lavfi", "-i", "sine=f=300:d=30", "-shortest", str(src)], check=True)
+# rode blokje = "spreker" die van links naar rechts loopt; geluid met pieken
+subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
+                "-f", "lavfi", "-i", "color=c=0x223344:s=1280x720:d=30:r=25",
+                "-f", "lavfi", "-i", "color=c=red:s=160x160:d=30:r=25",
+                "-f", "lavfi", "-i", "sine=f=300:d=30",
+                "-filter_complex", "[0][1]overlay=x='(W-w)*t/30':y=280",
+                "-shortest", str(src)], check=True)
 
-text = ("Dit is het geheim van goede clips. Niemand vertelt je dit. "
-        "Eerst knip je alle stiltes weg. Daarna voeg je captions toe. Zo blijft iedereen kijken.")
+text = ("So um this is the biggest mistake creators make. Uh nobody tells you this. "
+        "First you cut every silence. Then um you add captions. That is why people keep watching.")
 words, t = [], 2.0
 for w in text.split():
     words.append(Word(w, t, t + 0.4))
     t += 0.45
     if w.endswith("."):
-        t += 2.0  # lange pauze na elke zin
+        t += 1.5
+h = Highlight(2.0, words[-1].end + 0.2, 9, "demo", hook="The biggest mistake creators make")
 
-cfg = load_config("config.yaml")
-cfg["video"]["face_tracking"] = False
-h = Highlight(2.0, words[-1].end + 0.2, 9, "demo", hook="Het geheim van goede clips")
-
-for tighten in (False, True):
-    cfg["video"]["tighten_pauses"] = tighten
-    name = "met_pauzes" if not tighten else "ingekort"
-    make_clip(str(src), words, h, out, name, cfg)
-    d = json.loads((out / f"{name}.json").read_text())
-    print(f"{name:12s} duur: {d['duration']:.1f}s")
+for ctype in ("podcast", "gaming"):
+    cfg = apply_profile(load_config("config.yaml"), ctype)
+    # nagebootst 'gezichtstracking': het blokje loopt van links naar rechts
+    keys = [(s, (80 + 1120 * s / 30) / 1280) for s in [x / 2 for x in range(4, 50)]]
+    import autoclip.pipeline as pl
+    pl.face_track = lambda *a, k=keys: k   # echte detectie vereist een echt gezicht
+    make_clip(str(src), words, h, out, ctype, cfg)
+    print(ctype, "->", out / f"{ctype}.mp4")

@@ -1,23 +1,38 @@
-"""Pauzes inkorten: houd alleen spraak-segmenten over en herbereken de tijdlijn."""
+"""Pauzes en opvulwoorden wegknippen en de tijdlijn opnieuw berekenen."""
+import re
+
 from .models import Word
 
+FILLERS = {"um", "umm", "uh", "uhh", "uhm", "er", "erm", "hmm", "mm", "mmm", "ah", "eh", "huh"}
 
-def keep_segments(words: list[Word], start: float, end: float,
-                  max_gap: float = 0.5, pad: float = 0.1) -> list[tuple[float, float]]:
-    """Segmenten (in bronvideo-tijd) die behouden blijven; pauzes > max_gap worden weggeknipt."""
-    if not words:
+
+def is_filler(w: Word) -> bool:
+    return re.sub(r"[^a-z]", "", w.text.lower()) in FILLERS
+
+
+def keep_segments(words: list[Word], start: float, end: float, max_gap: float = 0.5,
+                  pad: float = 0.1, drop_fillers: bool = True) -> list[tuple[float, float]]:
+    """Segmenten (bronvideo-tijd) die blijven; pauzes > max_gap en opvulwoorden worden weggeknipt."""
+    segs, cur = [], None
+    for w in words:
+        if drop_fillers and is_filler(w):
+            if cur:
+                segs.append(cur)
+            cur = None
+            continue
+        if cur and w.start - cur[1] <= max_gap:
+            cur = (cur[0], w.end)
+        else:
+            if cur:
+                segs.append(cur)
+            cur = (w.start, w.end)
+    if cur:
+        segs.append(cur)
+    if not segs:
         return [(start, end)]
-    segs = []
-    s, e = words[0].start, words[0].end
-    for w in words[1:]:
-        if w.start - e > max_gap:
-            segs.append((s, e))
-            s = w.start
-        e = w.end
-    segs.append((s, e))
-    out = [(max(start, a - pad), min(end, b + pad)) for a, b in segs]
-    merged = [out[0]]
-    for a, b in out[1:]:
+    padded = [(max(start, a - pad), min(end, b + pad)) for a, b in segs]
+    merged = [padded[0]]
+    for a, b in padded[1:]:
         if a <= merged[-1][1]:
             merged[-1] = (merged[-1][0], max(merged[-1][1], b))
         else:
@@ -25,16 +40,25 @@ def keep_segments(words: list[Word], start: float, end: float,
     return merged
 
 
-def remap_words(words: list[Word], segs: list[tuple[float, float]]) -> list[Word]:
-    """Zet woordtijden om naar de nieuwe, ingekorte tijdlijn."""
-    offsets, acc = [], 0.0
+def remap_time(t: float, segs: list[tuple[float, float]]) -> float:
+    """Bronvideo-tijd -> tijd in de ingekorte clip (valt t in een knip, dan het volgende segment)."""
+    acc = 0.0
     for a, b in segs:
-        offsets.append(acc - a)
+        if t < a:
+            return acc
+        if t <= b:
+            return acc + (t - a)
         acc += b - a
+    return acc
+
+
+def remap_words(words: list[Word], segs: list[tuple[float, float]], drop_fillers: bool = True) -> list[Word]:
     out = []
     for w in words:
-        for (a, b), off in zip(segs, offsets):
+        if drop_fillers and is_filler(w):
+            continue
+        for a, b in segs:
             if a - 1e-6 <= w.start and w.end <= b + 1e-6:
-                out.append(Word(w.text, w.start + off, w.end + off))
+                out.append(Word(w.text, remap_time(w.start, segs), remap_time(w.end, segs)))
                 break
     return out

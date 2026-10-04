@@ -4,7 +4,9 @@ from pathlib import Path
 import yaml
 
 DEFAULTS = {
-    "language": None,
+    "language": "en",
+    "content_type": "auto",
+    "profiles": {},
     "whisper_model": "small",
     "clips": 5,
     "min_duration": 15,
@@ -12,7 +14,8 @@ DEFAULTS = {
     "platform": "tiktok",
     "llm": {"model": "claude-sonnet-5-5"},
     "video": {"width": 1080, "height": 1920, "fps": 30, "face_tracking": True,
-              "tighten_pauses": True, "max_pause": 0.5},
+              "tighten_pauses": True, "max_pause": 0.5,
+              "remove_fillers": True, "layout": "crop", "zoom": 0.05, "progress_bar": True},
     "captions": {
         "font": "Arial",
         "size": 84,

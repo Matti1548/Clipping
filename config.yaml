@@ -1,5 +1,6 @@
 # Auto-clip configuratie
-language: null            # bv. "nl" of "en"; null = automatisch detecteren
+language: en              # null = automatisch detecteren
+content_type: auto        # auto | podcast | interview | gaming | vlog | educational | general
 whisper_model: small      # tiny | base | small | medium | large-v3
 clips: 5
 min_duration: 15          # seconden
@@ -14,7 +15,11 @@ video:
   height: 1920
   fps: 30
   face_tracking: true
-  tighten_pauses: true   # lange stiltes tussen woorden wegknippen
+  layout: crop           # crop (rond gezicht) | fit_blur (gameplay: scherp midden, wazige achtergrond)
+  zoom: 0.05             # punch-in per tweede segment (0 = uit)
+  progress_bar: true
+  remove_fillers: true   # um / uh / er wegknippen
+  tighten_pauses: true
   max_pause: 0.5         # seconden
 
 captions:
@@ -27,3 +32,8 @@ captions:
   words_per_line: 3
   margin_bottom: 420     # veilige zone onder (UI van TikTok/Shorts)
   uppercase: true
+
+# Eigen overrides per videotype (bovenop de ingebouwde profielen), bv.:
+# profiles:
+#   gaming:
+#     captions: {words_per_line: 1, size: 110}

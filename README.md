@@ -5,6 +5,12 @@ Geef een lange video (bestand of URL) en krijg korte, 9:16 clips met geanimeerde
 ## Pipeline
 transcriptie (faster-whisper) → highlight-detectie (Claude, of heuristiek zonder API-sleutel) → knippen op zinsgrenzen → 9:16 met gezichtstracking → captions met woord-highlighting → metadata → export.
 
+## Videotypes
+`--type auto` (standaard) laat Claude het type raden; of kies `podcast`, `interview`, `gaming`, `vlog`, `educational`, `general`. Elk profiel stelt highlight-criteria, layout (gezichtstracking-crop of `fit_blur` voor gameplay), pauzelengte, zoom en captionstijl in. Gaming weegt audio-energie (schreeuwen, actie) zwaarder mee. Eigen aanpassingen: sectie `profiles:` in `config.yaml`.
+
+## Editing
+Pauzes en opvulwoorden (um/uh) worden weggeknipt, dynamische gezichtstracking, punch-in zoom per knip, voortgangsbalk, hook-titel, loudnorm. Standaardtaal is Engels (`--language`).
+
 ## Installeren
 Vereist Python 3.10+ en `ffmpeg`.
 
@@ -21,3 +27,4 @@ Output in `output/`: `clip_01.mp4` + `clip_01.json` (titel, caption, hashtags, s
 ## Tests
 
     pytest
+    python demo.py   # demo zonder Whisper/API

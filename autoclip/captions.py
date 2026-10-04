@@ -28,7 +28,7 @@ def build_ass(words: list[Word], clip_start: float, cfg: dict, video: dict,
 ScriptType: v4.00+
 PlayResX: {video['width']}
 PlayResY: {video['height']}
-WrapStyle: 2
+WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
