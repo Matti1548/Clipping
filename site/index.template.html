@@ -77,6 +77,10 @@ td.name{font-weight:500;min-width:170px}
 .pill.open{color:var(--warn);border-color:var(--warn)} .pill.klaar{color:var(--good);border-color:var(--good)}
 .req{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
 .req p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.pill.gepost{color:var(--good);border-color:var(--good)} .pill.nog{color:var(--muted)}
+.bench{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.bench div{border-left:3px solid var(--line);padding-left:12px}
+.bench b{display:block;font:500 22px/1.1 var(--f-mono)}
 @media (prefers-reduced-motion:no-preference){.btn,nav button{transition:border-color .15s,background .15s}}
 </style>
 
@@ -111,10 +115,11 @@ td.name{font-weight:500;min-width:170px}
       <div>
         <label for="handle">Gebruikersnaam</label>
         <input id="handle" placeholder="@jouwaccount" autocomplete="off">
-        <p class="hint">Opslaan gebeurt automatisch. <a id="studioLink" href="https://www.tiktok.com/tiktokstudio/analytics" target="_blank" rel="noopener">TikTok Studio openen ↗</a></p>
+        <p class="hint">Gekoppeld via Metricool. <a id="studioLink" href="https://www.tiktok.com/@clip_tt456" target="_blank" rel="noopener">Profiel openen ↗</a></p>
       </div>
       <div>
-        <p style="margin:0">Deze pagina kan TikTok niet zelf uitlezen: TikTok geeft geen toegang zonder eigen app-goedkeuring. Neem de cijfers per clip over uit TikTok Studio (Analytics → Content → klik op de video). Jij en ik zien daarna dezelfde cijfers en ik kan ze analyseren.</p>
+        <p style="margin:0 0 12px">Klik op synchroniseren om de cijfers van je account via Metricool op te halen. De pagina herkent je clips aan de titel in de TikTok-beschrijving. Gem. bekeken % levert TikTok voor dit account niet mee, die vul je zelf in.</p>
+        <div class="row"><button class="btn primary" id="syncBtn" hidden>Synchroniseer met TikTok</button><span class="status" id="syncStatus" style="align-self:center"></span></div>
       </div>
     </div>
   </div>
@@ -123,11 +128,18 @@ td.name{font-weight:500;min-width:170px}
     <h2>Cijfers per clip</h2>
     <div class="tablewrap" style="margin-top:12px">
       <table>
-        <thead><tr><th>Clip</th><th>Views</th><th>Likes</th><th>Reacties</th><th>Shares</th><th>Saves</th><th>Gem. bekeken %</th><th>Link TikTok</th></tr></thead>
+        <thead><tr><th>Clip</th><th>Views</th><th>Likes</th><th>Reacties</th><th>Shares</th><th>Saves</th><th>Gem. bekeken % (zelf)</th><th>Link TikTok</th></tr></thead>
         <tbody id="statRows"></tbody>
       </table>
     </div>
     <p class="status" id="saveStatus" style="margin-top:10px"></p>
+  </div>
+
+  <div class="panel" id="benchPanel" hidden>
+    <h2>Jouw account als maatstaf</h2>
+    <div class="bench" id="benchNums"></div>
+    <ul class="tips" id="benchTips"></ul>
+    <p class="status" id="benchMeta" style="margin-top:10px"></p>
   </div>
 
   <div class="panel" id="insightPanel">
@@ -167,7 +179,7 @@ const CLIPS = __CLIPS__;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CAPTION = "Jake Paul On YouTube";
-let db = null, stats = {}, dl = null;
+let db = null, stats = {}, dl = null, bench = null, mcp = null;
 
 /* tabs */
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
@@ -184,12 +196,18 @@ async function copy(text, btn){
   catch(e){ btn.textContent = "Selecteer handmatig"; const ta=document.createElement("textarea"); ta.value=text; ta.style.cssText="position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");btn.textContent="Gekopieerd"}catch(_){ } ta.remove(); }
   setTimeout(() => btn.textContent = old, 1400);
 }
+function statusPill(c){
+  const s = stats[c.naam];
+  if (s && s.views != null && s.posted) return `<div><span class="pill gepost">Gepost</span> <span class="status">${fmt(s.views)} views${s.url ? ` · <a href="${esc(s.url)}" target="_blank" rel="noopener">TikTok ↗</a>` : ""}</span></div>`;
+  return `<div><span class="pill nog">Nog niet gepost</span></div>`;
+}
 function renderClips(){
   $("#mClips").textContent = CLIPS.length;
   $("#grid").innerHTML = CLIPS.map((c,i) => `
     <article class="clip">
       <div class="frame">${c.url ? `<video controls playsinline preload="metadata" src="${esc(c.url)}#t=0.1"></video>` : `<div class="noasset">Video nog niet geüpload</div>`}</div>
       <div class="top"><span class="num">${String(c.n).padStart(2,"0")}</span><span class="tc">${c.van}–${c.tot} · ${c.dur}s</span></div>
+      ${statusPill(c)}
       <div class="title">${esc(c.titel)}</div>
       <div class="row">
         <button class="btn" data-copy="t" data-i="${i}">Kopieer titel</button>
@@ -269,14 +287,17 @@ function renderInsights(){
   $("#barViews").innerHTML = d.map(x => `<div class="bar"><span>#${String(x.c.n).padStart(2,"0")} ${esc(x.c.naam.slice(3).replace(/_/g," "))}</span><span class="t"><i style="width:${x.views/maxV*100}%"></i></span><span class="v">${fmt(x.views)}</span></div>`).join("");
   $("#barEng").innerHTML = d.map(x => `<div class="bar"><span>#${String(x.c.n).padStart(2,"0")} ${esc(x.c.naam.slice(3).replace(/_/g," "))}</span><span class="t"><i style="width:${(x.eng||0)/maxE*100}%"></i></span><span class="v">${x.eng==null?"–":x.eng.toFixed(1)+"%"}</span></div>`).join("");
   const out = [];
-  const med = [...d].map(x=>x.views).sort((a,b)=>a-b)[Math.floor(d.length/2)];
+  const med = bench && bench.median ? bench.median : [...d].map(x=>x.views).sort((a,b)=>a-b)[Math.floor(d.length/2)];
   for (const x of d) {
     const id = `#${String(x.c.n).padStart(2,"0")}`;
+    const age = x.s.posted ? (Date.now() - new Date(x.s.posted).getTime())/36e5 : null;
+    if (age != null && age < 24) { out.push(["warn", `${id}: pas ${Math.max(1,Math.round(age))} uur online met ${fmt(x.views)} views. Oordeel pas na 24 uur; je gemiddelde post haalt ${fmt(med)} views.`]); continue; }
     if (x.watch != null && x.watch < 40) out.push(["bad", `${id}: gemiddeld maar ${x.watch}% bekeken. Mensen haken vroeg af. Maak de eerste 2 seconden sterker of begin met een kortere zin.`]);
     else if (x.watch != null && x.watch >= 60) out.push(["good", `${id}: ${x.watch}% gemiddeld bekeken. Dit formaat werkt. Gebruik dit type moment vaker.`]);
     if (x.eng != null && x.eng < 4 && x.views >= 1000) out.push(["warn", `${id}: engagement ${x.eng.toFixed(1)}% is laag. Sluit af met een vraag of een stelling waar mensen op willen reageren.`]);
     if (x.share != null && x.share >= 1) out.push(["good", `${id}: ${x.share.toFixed(1)}% deelt de clip. Dat is sterk. Gebruik deze invalshoek in je volgende titel.`]);
-    if (d.length > 2 && x.views < med*0.5) out.push(["warn", `${id}: minder dan de helft van de mediaan aan views. Probeer een andere titel of een ander openingsbeeld.`]);
+    if (x.views < med*0.5) out.push(["warn", `${id}: ${fmt(x.views)} views is minder dan de helft van je gemiddelde post (${fmt(med)}). Probeer een andere titel of een ander openingsbeeld.`]);
+    else if (x.views > med*1.5) out.push(["good", `${id}: ${fmt(x.views)} views, ruim boven je gemiddelde (${fmt(med)}). Herhaal dit type moment.`]);
   }
   if (!out.length) out.push(["warn", "Nog te weinig data voor concrete tips. Vul ook ‘Gem. bekeken %’ en de likes, shares en saves in."]);
   tips.innerHTML = out.map(([k,t]) => `<li class="${k}">${esc(t)}</li>`).join("");
@@ -289,7 +310,7 @@ $("#handle").addEventListener("input", () => {
   clearTimeout(handleTimer);
   handleTimer = setTimeout(async () => {
     const h = $("#handle").value.trim().replace(/^@?/, "@").replace(/^@$/, "");
-    $("#studioLink").href = "https://www.tiktok.com/tiktokstudio/analytics";
+    
     if (db) try { await db.doc("settings/profile").set({ handle: h }); } catch(e){}
   }, 700);
 });
@@ -309,6 +330,63 @@ $("#askBtn").addEventListener("click", async () => {
   $("#stopBtn").hidden = true; $("#askBtn").disabled = false;
 });
 $("#stopBtn").addEventListener("click", () => ctrl && ctrl.abort());
+
+/* TikTok-sync via Metricool */
+const MC = "Metricool Social Media Management", BRAND = "7237695";
+const median = a => { const b=[...a].sort((x,y)=>x-y), m=b.length>>1; return b.length ? (b.length%2 ? b[m] : (b[m-1]+b[m])/2) : 0; };
+function toIso(t){ return `${t.slice(0,4)}-${t.slice(4,6)}-${t.slice(6,8)}T${t.slice(8,10)}:${t.slice(10,12)}:${t.slice(12,14)}+02:00`; }
+function renderBench(){
+  const p = $("#benchPanel"); if (!bench) { p.hidden = true; return; }
+  p.hidden = false;
+  $("#benchNums").innerHTML = [["Posts",bench.n],["Mediaan views",fmt(bench.median)],["Top 25% vanaf",fmt(bench.p75)],["Beste post",fmt(bench.max)]].map(([k,v]) => `<div><span class="eyebrow">${k}</span><b>${v}</b></div>`).join("");
+  $("#benchTips").innerHTML = (bench.tips||[]).map(t => `<li class="${t[0]}">${esc(t[1])}</li>`).join("");
+  $("#benchMeta").textContent = "Bijgewerkt " + new Date(bench.updated).toLocaleString("nl-BE") + " · @" + (bench.handle||"");
+}
+function analyse(P){
+  const v = P.map(p=>p.v), med = median(v), s = [...v].sort((a,b)=>a-b);
+  const p75 = s[Math.floor(s.length*0.75)] || 0, mx = s[s.length-1] || 0, tips = [];
+  const grp = (f) => { const a = P.filter(f).map(p=>p.v), b = P.filter(p=>!f(p)).map(p=>p.v); return a.length>=8 && b.length>=8 ? [median(a), median(b), a.length, b.length] : null; };
+  const brand = grp(p => /#ad\b|@\w+/i.test(p.desc));
+  if (brand && brand[0] > brand[1]*1.1) tips.push(["good", `Posts met een @vermelding of #ad halen mediaan ${fmt(brand[0])} views tegen ${fmt(brand[1])} zonder. Een duidelijke partner of onderwerp-tag helpt.`]);
+  const dur = grp(p => p.dur >= 15 && p.dur < 30);
+  if (dur) tips.push([dur[0] >= dur[1] ? "good":"warn", `Clips van 15–29 s: mediaan ${fmt(dur[0])} views; andere lengtes ${fmt(dur[1])}. ${Math.abs(dur[0]-dur[1])/Math.max(dur[1],1) < 0.1 ? "Lengte maakt voor jouw account weinig uit." : (dur[0]>dur[1] ? "Houd clips kort." : "Langere clips doen het hier beter.")}`]);
+  const eve = grp(p => { const h = +p.t.slice(8,10); return h>=14 && h<=21; });
+  if (eve) tips.push([eve[0] >= eve[1] ? "good":"warn", `Posten tussen 14:00 en 22:00: mediaan ${fmt(eve[0])} views, daarbuiten ${fmt(eve[1])}.`]);
+  const spread = mx / Math.max(med,1);
+  tips.push([spread < 5 ? "warn":"good", `Je beste post haalt ${fmt(mx)} views en je gemiddelde ${fmt(med)}. ${spread < 5 ? "De meeste posts zitten dicht bij dat gemiddelde, dus er is nog geen uitschieter. Test grotere verschillen in hook en onderwerp." : "Er zijn uitschieters; kijk wat die gemeen hebben."}`]);
+  return { n: P.length, median: med, p75, max: mx, tips };
+}
+function parseRows(res){
+  let p = res.payload;
+  if (!p || !p.rows) { try { p = JSON.parse(res.content.find(c => c.type === "text").text); } catch(e){ p = null; } }
+  return p && p.rows ? p.rows : [];
+}
+async function sync(){
+  const btn = $("#syncBtn"), st = $("#syncStatus"); btn.disabled = true; st.textContent = "Ophalen…";
+  try {
+    const to = new Date(), from = new Date(Date.now() - 120*864e5), iso = d => d.toISOString().slice(0,19)+"+00:00";
+    const res = await mcp.callTool(MC, "getAnalyticsDataByMetrics", { brandId: BRAND, from: iso(from), to: iso(to), metrics: ["TKPO02","TKPO03","TKPO05","TKPO06","TKPO07","TKPO08","TKPO09","TKPO10"] });
+    const rows = parseRows(res);
+    const num = x => x == null || x === "" ? null : Number(x);
+    const P = rows.map(r => ({ t: r[0], url: String(r[1]||"").split("?")[0], desc: r[2]||"", dur: num(r[3]), v: num(r[4])||0, l: num(r[5])||0, c: num(r[6])||0, s: num(r[7])||0 }));
+    if (!P.length) { st.textContent = "Geen posts gevonden."; btn.disabled = false; return; }
+    let found = 0;
+    for (const c of CLIPS) {
+      const key = c.titel.replace(/^"|"$/g,"").slice(0,32).toLowerCase();
+      const p = P.find(x => x.desc.toLowerCase().includes(key));
+      if (!p) continue;
+      found++;
+      const ref = db.doc("stats/" + c.naam), cur = await ref.get();
+      const data = { naam: c.naam, views: p.v, likes: p.l, comments: p.c, shares: p.s, url: p.url, posted: toIso(p.t), source: "metricool", synced: new Date().toISOString() };
+      if (cur.exists) await ref.update(data); else await ref.set(data);
+    }
+    const b = analyse(P); b.updated = new Date().toISOString(); b.handle = "clip_tt456";
+    await db.doc("settings/benchmark").set(b);
+    st.textContent = `${found} van ${CLIPS.length} clips gevonden · ${P.length} posts geanalyseerd`;
+  } catch(e){ st.textContent = "Mislukt: " + (e.message || e.code || "onbekende fout"); }
+  btn.disabled = false;
+}
+$("#syncBtn").addEventListener("click", sync);
 
 /* aanvragen */
 function renderReqs(docs){
@@ -334,13 +412,15 @@ renderClips(); renderRows(); renderInsights();
   try { dl = await claude.use("downloads"); } catch(e){}
   try { sampleFn = await claude.use("sample"); renderInsights(); } catch(e){}
   try { db = await claude.use("db"); } catch(e){}
+  try { mcp = await claude.use("mcp"); if (mcp && db) $("#syncBtn").hidden = false; } catch(e){}
   if (!db) { $("#saveStatus").textContent = "Log in om cijfers en aanvragen op te slaan."; return; }
   db.collection("stats").onSnapshot(snap => {
     const focus = document.activeElement && document.activeElement.id;
     stats = {}; snap.docs.forEach(d => stats[d.id] = d.data());
     if (!(focus && focus.startsWith("in-"))) renderRows();
-    renderInsights();
+    renderInsights(); renderClips();
   });
+  db.doc("settings/benchmark").onSnapshot(s => { bench = s.exists ? s.data() : null; renderBench(); renderInsights(); });
   db.doc("settings/profile").onSnapshot(s => { const h = s.exists && s.data().handle; if (h && document.activeElement !== $("#handle")) $("#handle").value = h; });
   db.collection("requests").orderBy("at", "desc").onSnapshot(snap => renderReqs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 })();
