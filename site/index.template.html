@@ -1,0 +1,347 @@
+<title>Clip Studio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  /* Layout: montagetafel. Kop met campagne, drie tabs, clips als 9:16-kaarten naast elkaar. */
+  --bg:#eceef1; --surface:#f8f9fb; --ink:#14181d; --muted:#5c6671; --line:#d3d8de;
+  --accent:#2347ff; --accent-ink:#ffffff; --good:#12805c; --warn:#b36a00; --bad:#c2312d;
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1014; --surface:#151a20; --ink:#e9edf1; --muted:#8c97a3; --line:#27303a;
+  --accent:#6f8bff; --accent-ink:#0b1020; --good:#3cc795; --warn:#e5a23a; --bad:#ff7a73; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1014; --surface:#151a20; --ink:#e9edf1; --muted:#8c97a3; --line:#27303a;
+  --accent:#6f8bff; --accent-ink:#0b1020; --good:#3cc795; --warn:#e5a23a; --bad:#ff7a73; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);margin:0;padding-inline:20px;padding-block:24px 64px}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,5vw,44px);font-weight:700;letter-spacing:-.02em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font:500 12px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;padding-bottom:20px;border-bottom:2px solid var(--ink)}
+header .meta{display:flex;gap:24px;flex-wrap:wrap}
+header .meta div{min-width:0}
+header .meta b{display:block;font:500 22px/1.1 var(--f-mono)}
+nav{display:flex;gap:4px;margin-block:20px;flex-wrap:wrap}
+nav button{font:500 14px var(--f-body);padding:10px 16px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;border-radius:6px}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px}
+.clip{display:flex;flex-direction:column;gap:12px;min-width:0}
+.clip .frame{aspect-ratio:9/16;background:#000;border-radius:8px;overflow:hidden;max-width:100%}
+.clip video{width:100%;height:100%;display:block;object-fit:cover;background:#000}
+.clip .noasset{display:grid;place-items:center;height:100%;color:#8c97a3;font:12px var(--f-mono);padding:16px;text-align:center}
+.clip .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.clip .num{font:500 13px var(--f-mono);color:var(--accent)}
+.clip .tc{font:12px var(--f-mono);color:var(--muted)}
+.clip .title{font-weight:500;line-height:1.3;min-height:3.9em}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:500 13px var(--f-body);padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn[disabled]{opacity:.5;cursor:default}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px;min-width:0}
+.panel+.panel{margin-top:20px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+label{display:block;font:500 12px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input,select,textarea{width:100%;font:15px var(--f-body);padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);min-width:0}
+textarea{min-height:110px;resize:vertical}
+.hint{color:var(--muted);font-size:13px;margin:6px 0 0}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{font:500 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
+td input{padding:6px 8px;font:14px var(--f-mono);min-width:72px}
+td.name{font-weight:500;min-width:170px}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.sum div{border-left:3px solid var(--accent);padding-left:12px}
+.sum b{display:block;font:500 26px/1.1 var(--f-mono)}
+.bars{display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:minmax(90px,170px) 1fr 64px;gap:10px;align-items:center;font-size:13px}
+.bar .t{height:14px;background:var(--bg);border-radius:3px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--accent)}
+.bar .v{font:12px var(--f-mono);text-align:right}
+.tips{display:grid;gap:10px;padding:0;margin:0;list-style:none}
+.tips li{padding:10px 12px;border-radius:6px;border:1px solid var(--line);border-left-width:4px}
+.tips li.good{border-left-color:var(--good)} .tips li.warn{border-left-color:var(--warn)} .tips li.bad{border-left-color:var(--bad)}
+.empty{color:var(--muted);padding:12px 0}
+.ai{white-space:pre-wrap;line-height:1.55}
+.status{font:12px var(--f-mono);color:var(--muted)}
+.pill{display:inline-block;font:500 11px var(--f-mono);padding:3px 8px;border-radius:99px;border:1px solid var(--line);text-transform:uppercase;letter-spacing:.05em}
+.pill.open{color:var(--warn);border-color:var(--warn)} .pill.klaar{color:var(--good);border-color:var(--good)}
+.req{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.req p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.btn,nav button{transition:border-color .15s,background .15s}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Campagne</div>
+    <h1>Jake Paul × General Matter</h1>
+    <div class="hint" style="margin-top:8px">“I Went Inside a Nuclear Factory” · TikTok, Reels, Shorts · 1080×1920</div>
+  </div>
+  <div class="meta">
+    <div><span class="eyebrow">Clips</span><b id="mClips">7</b></div>
+    <div><span class="eyebrow">Post-caption</span><b style="font-size:15px;line-height:1.4">Jake Paul On YouTube</b></div>
+  </div>
+</header>
+
+<nav role="tablist" aria-label="Onderdelen">
+  <button role="tab" aria-selected="true" data-tab="clips">Clips</button>
+  <button role="tab" aria-selected="false" data-tab="stats">Statistieken</button>
+  <button role="tab" aria-selected="false" data-tab="aanvraag">Nieuwe aanvraag</button>
+</nav>
+
+<section id="tab-clips">
+  <div class="grid" id="grid"></div>
+  <p class="hint" style="margin-top:20px">De post-caption is bij elke clip “Jake Paul On YouTube”. De titel kopieer je los. De bestanden hier zijn de web-versies; de originelen staan in de GitHub-repo onder <span class="mono">campaigns/jake-paul-general-matter/clips/</span>.</p>
+</section>
+
+<section id="tab-stats" hidden>
+  <div class="panel">
+    <h2>TikTok-account</h2>
+    <div class="cols" style="margin-top:14px">
+      <div>
+        <label for="handle">Gebruikersnaam</label>
+        <input id="handle" placeholder="@jouwaccount" autocomplete="off">
+        <p class="hint">Opslaan gebeurt automatisch. <a id="studioLink" href="https://www.tiktok.com/tiktokstudio/analytics" target="_blank" rel="noopener">TikTok Studio openen ↗</a></p>
+      </div>
+      <div>
+        <p style="margin:0">Deze pagina kan TikTok niet zelf uitlezen: TikTok geeft geen toegang zonder eigen app-goedkeuring. Neem de cijfers per clip over uit TikTok Studio (Analytics → Content → klik op de video). Jij en ik zien daarna dezelfde cijfers en ik kan ze analyseren.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Cijfers per clip</h2>
+    <div class="tablewrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>Clip</th><th>Views</th><th>Likes</th><th>Reacties</th><th>Shares</th><th>Saves</th><th>Gem. bekeken %</th><th>Link TikTok</th></tr></thead>
+        <tbody id="statRows"></tbody>
+      </table>
+    </div>
+    <p class="status" id="saveStatus" style="margin-top:10px"></p>
+  </div>
+
+  <div class="panel" id="insightPanel">
+    <h2>Wat de cijfers zeggen</h2>
+    <div id="summary" style="margin-top:14px"></div>
+    <div class="cols" style="margin-top:6px">
+      <div><h3 style="margin-bottom:10px">Views per clip</h3><div class="bars" id="barViews"></div></div>
+      <div><h3 style="margin-bottom:10px">Engagement per clip</h3><div class="bars" id="barEng"></div></div>
+    </div>
+    <h3 style="margin-top:22px;margin-bottom:10px">Verbeterpunten</h3>
+    <ul class="tips" id="tips"></ul>
+    <div class="row" style="margin-top:18px">
+      <button class="btn primary" id="askBtn" hidden>Vraag Claude om advies</button>
+      <button class="btn" id="stopBtn" hidden>Stop</button>
+    </div>
+    <div class="ai panel" id="aiOut" style="margin-top:14px" hidden></div>
+  </div>
+</section>
+
+<section id="tab-aanvraag" hidden>
+  <div class="panel">
+    <h2>Nieuwe campagne of extra clips aanvragen</h2>
+    <p class="hint" style="margin-bottom:16px">Vul de brief in en plaats de link naar de video. Daarna zeg je in je Claude-sessie “verwerk de aanvraag op de site”; ik lees ze hier uit, maak de clips en zet ze op deze pagina.</p>
+    <div class="cols">
+      <div><label for="rName">Campagnenaam</label><input id="rName" placeholder="Bijv. Jake Paul × …"></div>
+      <div><label for="rLink">Link naar video (Drive of YouTube)</label><input id="rLink" placeholder="https://…"></div>
+    </div>
+    <div style="margin-top:14px"><label for="rBrief">Brief</label><textarea id="rBrief" placeholder="Platforms, minimale lengte, post-caption, wensen voor de hook, stijl van de ondertitels…"></textarea></div>
+    <div class="row" style="margin-top:14px"><button class="btn primary" id="rSend">Aanvraag opslaan</button><span class="status" id="rStatus" style="align-self:center"></span></div>
+  </div>
+  <div class="panel"><h2>Aanvragen</h2><div id="reqList" class="empty">Nog geen aanvragen.</div></div>
+</section>
+</div>
+
+<script>
+const CLIPS = __CLIPS__;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const CAPTION = "Jake Paul On YouTube";
+let db = null, stats = {}, dl = null;
+
+/* tabs */
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  for (const t of ["clips","stats","aanvraag"]) $("#tab-"+t).hidden = t !== b.dataset.tab;
+  try { localStorage.setItem("tab", b.dataset.tab); } catch(e){}
+}));
+try { const t = localStorage.getItem("tab"); if (t) document.querySelector(`nav button[data-tab="${t}"]`)?.click(); } catch(e){}
+
+/* clips */
+async function copy(text, btn){
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(text); btn.textContent = "Gekopieerd"; }
+  catch(e){ btn.textContent = "Selecteer handmatig"; const ta=document.createElement("textarea"); ta.value=text; ta.style.cssText="position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");btn.textContent="Gekopieerd"}catch(_){ } ta.remove(); }
+  setTimeout(() => btn.textContent = old, 1400);
+}
+function renderClips(){
+  $("#mClips").textContent = CLIPS.length;
+  $("#grid").innerHTML = CLIPS.map((c,i) => `
+    <article class="clip">
+      <div class="frame">${c.url ? `<video controls playsinline preload="metadata" src="${esc(c.url)}#t=0.1"></video>` : `<div class="noasset">Video nog niet geüpload</div>`}</div>
+      <div class="top"><span class="num">${String(c.n).padStart(2,"0")}</span><span class="tc">${c.van}–${c.tot} · ${c.dur}s</span></div>
+      <div class="title">${esc(c.titel)}</div>
+      <div class="row">
+        <button class="btn" data-copy="t" data-i="${i}">Kopieer titel</button>
+        <button class="btn" data-copy="c" data-i="${i}">Kopieer caption</button>
+        <button class="btn primary" data-dl="${i}" ${c.url?"":"disabled"}>Download</button>
+      </div>
+    </article>`).join("");
+}
+$("#grid").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.copy) { const c = CLIPS[b.dataset.i]; copy(b.dataset.copy === "t" ? c.titel : CAPTION, b); }
+  if (b.dataset.dl != null) {
+    const c = CLIPS[b.dataset.dl]; const old = b.textContent; b.textContent = "Bezig…";
+    try {
+      if (!dl) throw new Error("nodl");
+      const blob = await (await fetch(c.url)).blob();
+      await dl.save({ filename: c.naam + ".mp4", data: blob });
+      b.textContent = "Opgeslagen";
+    } catch(err){ b.textContent = "Niet gelukt"; }
+    setTimeout(() => b.textContent = old, 1800);
+  }
+});
+
+/* stats */
+const FIELDS = ["views","likes","comments","shares","saves","watch"];
+function num(v){ const n = Number(v); return isFinite(n) && v !== "" && v != null ? n : null; }
+function renderRows(){
+  $("#statRows").innerHTML = CLIPS.map(c => {
+    const s = stats[c.naam] || {};
+    const cell = f => `<td><input inputmode="decimal" id="in-${c.naam}-${f}" data-clip="${c.naam}" data-f="${f}" value="${esc(s[f] ?? "")}" aria-label="${f} ${esc(c.naam)}"></td>`;
+    return `<tr><td class="name">${String(c.n).padStart(2,"0")} · ${esc(c.titel.length>38?c.titel.slice(0,38)+"…":c.titel)}</td>${FIELDS.map(cell).join("")}
+      <td><input id="in-${c.naam}-url" data-clip="${c.naam}" data-f="url" style="font-family:var(--f-body)" placeholder="https://tiktok.com/…" value="${esc(s.url ?? "")}"></td></tr>`;
+  }).join("");
+}
+let saveTimer = {};
+$("#statRows").addEventListener("input", e => {
+  const el = e.target; if (!el.dataset.clip) return;
+  clearTimeout(saveTimer[el.dataset.clip]);
+  saveTimer[el.dataset.clip] = setTimeout(() => saveClip(el.dataset.clip), 700);
+});
+async function saveClip(name){
+  if (!db) { $("#saveStatus").textContent = "Opslaan niet beschikbaar (niet ingelogd)."; return; }
+  const data = { naam: name };
+  for (const f of [...FIELDS, "url"]) {
+    const el = document.getElementById(`in-${name}-${f}`); const v = el.value.trim();
+    data[f] = f === "url" ? v : num(v.replace(",", "."));
+  }
+  try { await db.doc("stats/" + name).set(data); $("#saveStatus").textContent = "Opgeslagen " + new Date().toLocaleTimeString("nl-BE"); }
+  catch(e){ $("#saveStatus").textContent = "Opslaan mislukt: " + (e.message || e.code); }
+}
+const pct = (a,b) => b ? (a/b*100) : null;
+const fmt = n => n == null ? "–" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e4 ? Math.round(n/1e3)+"K" : n >= 1e3 ? (n/1e3).toFixed(1)+"K" : String(Math.round(n));
+function derived(){
+  return CLIPS.map(c => {
+    const s = stats[c.naam] || {}; const v = s.views;
+    const inter = (s.likes||0)+(s.comments||0)+(s.shares||0)+(s.saves||0);
+    return { c, s, views: v, eng: v ? inter/v*100 : null, share: v ? (s.shares||0)/v*100 : null, save: v ? (s.saves||0)/v*100 : null, watch: s.watch };
+  }).filter(d => d.views != null && d.views > 0);
+}
+function renderInsights(){
+  const d = derived();
+  const sum = $("#summary"), tips = $("#tips");
+  if (!d.length) {
+    sum.innerHTML = `<p class="empty">Nog geen cijfers. Vul hierboven minstens de views van één clip in, dan verschijnen hier de grafieken en tips.</p>`;
+    $("#barViews").innerHTML = $("#barEng").innerHTML = ""; tips.innerHTML = ""; $("#askBtn").hidden = true; return;
+  }
+  const tv = d.reduce((a,x)=>a+x.views,0);
+  const ti = d.reduce((a,x)=>a+(x.s.likes||0)+(x.s.comments||0)+(x.s.shares||0)+(x.s.saves||0),0);
+  const w = d.filter(x=>x.watch!=null); const aw = w.length ? w.reduce((a,x)=>a+x.watch,0)/w.length : null;
+  const best = [...d].sort((a,b)=>b.views-a.views)[0];
+  sum.innerHTML = `<div class="sum">
+    <div><span class="eyebrow">Totaal views</span><b>${fmt(tv)}</b></div>
+    <div><span class="eyebrow">Engagement</span><b>${(ti/tv*100).toFixed(1)}%</b></div>
+    <div><span class="eyebrow">Gem. bekeken</span><b>${aw==null?"–":aw.toFixed(0)+"%"}</b></div>
+    <div><span class="eyebrow">Beste clip</span><b>#${String(best.c.n).padStart(2,"0")}</b></div></div>`;
+  const maxV = Math.max(...d.map(x=>x.views)), maxE = Math.max(...d.map(x=>x.eng||0), 1);
+  $("#barViews").innerHTML = d.map(x => `<div class="bar"><span>#${String(x.c.n).padStart(2,"0")} ${esc(x.c.naam.slice(3).replace(/_/g," "))}</span><span class="t"><i style="width:${x.views/maxV*100}%"></i></span><span class="v">${fmt(x.views)}</span></div>`).join("");
+  $("#barEng").innerHTML = d.map(x => `<div class="bar"><span>#${String(x.c.n).padStart(2,"0")} ${esc(x.c.naam.slice(3).replace(/_/g," "))}</span><span class="t"><i style="width:${(x.eng||0)/maxE*100}%"></i></span><span class="v">${x.eng==null?"–":x.eng.toFixed(1)+"%"}</span></div>`).join("");
+  const out = [];
+  const med = [...d].map(x=>x.views).sort((a,b)=>a-b)[Math.floor(d.length/2)];
+  for (const x of d) {
+    const id = `#${String(x.c.n).padStart(2,"0")}`;
+    if (x.watch != null && x.watch < 40) out.push(["bad", `${id}: gemiddeld maar ${x.watch}% bekeken. Mensen haken vroeg af. Maak de eerste 2 seconden sterker of begin met een kortere zin.`]);
+    else if (x.watch != null && x.watch >= 60) out.push(["good", `${id}: ${x.watch}% gemiddeld bekeken. Dit formaat werkt. Gebruik dit type moment vaker.`]);
+    if (x.eng != null && x.eng < 4 && x.views >= 1000) out.push(["warn", `${id}: engagement ${x.eng.toFixed(1)}% is laag. Sluit af met een vraag of een stelling waar mensen op willen reageren.`]);
+    if (x.share != null && x.share >= 1) out.push(["good", `${id}: ${x.share.toFixed(1)}% deelt de clip. Dat is sterk. Gebruik deze invalshoek in je volgende titel.`]);
+    if (d.length > 2 && x.views < med*0.5) out.push(["warn", `${id}: minder dan de helft van de mediaan aan views. Probeer een andere titel of een ander openingsbeeld.`]);
+  }
+  if (!out.length) out.push(["warn", "Nog te weinig data voor concrete tips. Vul ook ‘Gem. bekeken %’ en de likes, shares en saves in."]);
+  tips.innerHTML = out.map(([k,t]) => `<li class="${k}">${esc(t)}</li>`).join("");
+  $("#askBtn").hidden = !sampleFn;
+}
+
+/* account */
+let handleTimer;
+$("#handle").addEventListener("input", () => {
+  clearTimeout(handleTimer);
+  handleTimer = setTimeout(async () => {
+    const h = $("#handle").value.trim().replace(/^@?/, "@").replace(/^@$/, "");
+    $("#studioLink").href = "https://www.tiktok.com/tiktokstudio/analytics";
+    if (db) try { await db.doc("settings/profile").set({ handle: h }); } catch(e){}
+  }, 700);
+});
+
+/* Claude-advies */
+let sampleFn = null, ctrl = null;
+$("#askBtn").addEventListener("click", async () => {
+  if (!sampleFn) return;
+  ctrl = new AbortController(); $("#stopBtn").hidden = false; $("#askBtn").disabled = true;
+  const out = $("#aiOut"); out.hidden = false; out.textContent = "Claude denkt na…";
+  const rows = derived().map(x => ({ nr: x.c.n, titel: x.c.titel, duur_s: x.c.dur, views: x.views, likes: x.s.likes, reacties: x.s.comments, shares: x.s.shares, saves: x.s.saves, gem_bekeken_pct: x.watch, engagement_pct: x.eng && +x.eng.toFixed(2) }));
+  const prompt = `Je bent een ervaren short-form video strateeg. Een video-clipper heeft 7 verticale clips (15–35 s) gepost op TikTok uit één YouTube-video van Jake Paul over een bezoek aan een nuclear-fabriek (General Matter). Post-caption is altijd "Jake Paul On YouTube". Hier zijn de cijfers (JSON):\n${JSON.stringify(rows)}\n\nGeef in het Nederlands, kort en concreet: 1) wat werkt en waarom, 2) wat zwak is en waarom, 3) vijf acties voor de volgende clips (hook, lengte, titel, ondertitels, postmoment). Noem clips met hun nummer. Verzin geen cijfers die er niet staan.`;
+  try {
+    const r = await sampleFn(prompt, { signal: ctrl.signal, cache: false, onText: ({text}) => { out.textContent = text; } });
+    out.textContent = r.text;
+  } catch(e){ if (e && e.code === "cancelled") {} else out.textContent += "\n\nMislukt: " + (e.message || e.code || "onbekende fout"); }
+  $("#stopBtn").hidden = true; $("#askBtn").disabled = false;
+});
+$("#stopBtn").addEventListener("click", () => ctrl && ctrl.abort());
+
+/* aanvragen */
+function renderReqs(docs){
+  const el = $("#reqList");
+  if (!docs.length) { el.className = "empty"; el.textContent = "Nog geen aanvragen."; return; }
+  el.className = "";
+  el.innerHTML = docs.map(d => `<div class="req"><div class="row" style="align-items:center;justify-content:space-between"><h3>${esc(d.name || "Zonder naam")}</h3><span class="pill ${d.status==="klaar"?"klaar":"open"}">${esc(d.status||"open")}</span></div>
+    ${d.link ? `<p class="mono" style="font-size:12px">${esc(d.link)}</p>` : ""}<p>${esc(d.brief||"")}</p><p class="status">${esc(d.at ? new Date(d.at).toLocaleString("nl-BE") : "")}</p></div>`).join("");
+}
+$("#rSend").addEventListener("click", async () => {
+  const name = $("#rName").value.trim(), link = $("#rLink").value.trim(), brief = $("#rBrief").value.trim();
+  if (!db) { $("#rStatus").textContent = "Opslaan niet beschikbaar (niet ingelogd)."; return; }
+  if (!link && !brief) { $("#rStatus").textContent = "Vul minstens een link of een brief in."; return; }
+  try {
+    await db.collection("requests").add({ name, link, brief, status: "open", at: new Date().toISOString() });
+    $("#rName").value = $("#rLink").value = $("#rBrief").value = ""; $("#rStatus").textContent = "Opgeslagen. Zeg in je sessie: verwerk de aanvraag.";
+  } catch(e){ $("#rStatus").textContent = "Mislukt: " + (e.message || e.code); }
+});
+
+/* start */
+renderClips(); renderRows(); renderInsights();
+(async () => {
+  try { dl = await claude.use("downloads"); } catch(e){}
+  try { sampleFn = await claude.use("sample"); renderInsights(); } catch(e){}
+  try { db = await claude.use("db"); } catch(e){}
+  if (!db) { $("#saveStatus").textContent = "Log in om cijfers en aanvragen op te slaan."; return; }
+  db.collection("stats").onSnapshot(snap => {
+    const focus = document.activeElement && document.activeElement.id;
+    stats = {}; snap.docs.forEach(d => stats[d.id] = d.data());
+    if (!(focus && focus.startsWith("in-"))) renderRows();
+    renderInsights();
+  });
+  db.doc("settings/profile").onSnapshot(s => { const h = s.exists && s.data().handle; if (h && document.activeElement !== $("#handle")) $("#handle").value = h; });
+  db.collection("requests").orderBy("at", "desc").onSnapshot(snap => renderReqs(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+})();
+</script>
