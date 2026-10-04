@@ -98,12 +98,42 @@ td.name{font-weight:500;min-width:170px}
 </header>
 
 <nav role="tablist" aria-label="Onderdelen">
-  <button role="tab" aria-selected="true" data-tab="clips">Clips</button>
+  <button role="tab" aria-selected="true" data-tab="start">Start</button>
+  <button role="tab" aria-selected="false" data-tab="clips">Clips</button>
   <button role="tab" aria-selected="false" data-tab="stats">Statistieken</button>
   <button role="tab" aria-selected="false" data-tab="aanvraag">Nieuwe aanvraag</button>
 </nav>
 
-<section id="tab-clips">
+<section id="tab-start">
+  <div class="cols">
+    <div class="panel">
+      <h2>Alles op één plek</h2>
+      <ul class="tips" style="margin-top:14px">
+        <li class="good"><b>Clips</b><br>Tabblad Clips: bekijken, titel kopiëren, downloaden. Originelen in de repo.</li>
+        <li class="good"><b>Statistieken</b><br>Tabblad Statistieken: synchroniseren met TikTok en advies krijgen.</li>
+        <li class="good"><b>Nieuwe campagne</b><br>Tabblad Nieuwe aanvraag, daarna in je sessie “verwerk de aanvraag”.</li>
+      </ul>
+      <div class="row" style="margin-top:16px">
+        <a class="btn" href="https://github.com/matti1548/clipping/tree/claude/inspiring-ramanujan-yz5670" target="_blank" rel="noopener">Repo op GitHub ↗</a>
+        <a class="btn" href="https://github.com/matti1548/clipping/tree/claude/inspiring-ramanujan-yz5670/campaigns/jake-paul-general-matter/clips" target="_blank" rel="noopener">Originele clips ↗</a>
+        <a class="btn" href="https://www.tiktok.com/@clip_tt456" target="_blank" rel="noopener">TikTok-profiel ↗</a>
+        <a class="btn" href="https://app.metricool.com" target="_blank" rel="noopener">Metricool ↗</a>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Leerpunten voor de volgende clips</h2>
+      <ul class="tips" style="margin-top:14px">
+        <li class="warn">Je account zit rond 784 views per post; er is nog geen uitschieter. Verschil maak je met hook en onderwerp.</li>
+        <li class="good">Lengte (15–29 s vs. rest) en posttijd (14–22 u) maken bijna geen verschil. Daar hoef je niet op te sturen.</li>
+        <li class="good">Titel: een concrete bewering, cijfer of vraag uit de clip. Geen losse tags als enige tekst.</li>
+        <li class="good">Post eerst de clips met de scherpste openingszin. Meet na 24 uur en vergelijk met 784.</li>
+      </ul>
+      <p class="hint">Volledige lijst: <span class="mono">LEERPUNTEN.md</span> in de repo. Wordt na elke campagne bijgewerkt.</p>
+    </div>
+  </div>
+</section>
+
+<section id="tab-clips" hidden>
   <div class="grid" id="grid"></div>
   <p class="hint" style="margin-top:20px">De post-caption is bij elke clip “Jake Paul On YouTube”. De titel kopieer je los. De bestanden hier zijn de web-versies; de originelen staan in de GitHub-repo onder <span class="mono">campaigns/jake-paul-general-matter/clips/</span>.</p>
 </section>
@@ -184,7 +214,7 @@ let db = null, stats = {}, dl = null, bench = null, mcp = null;
 /* tabs */
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  for (const t of ["clips","stats","aanvraag"]) $("#tab-"+t).hidden = t !== b.dataset.tab;
+  for (const t of ["start","clips","stats","aanvraag"]) $("#tab-"+t).hidden = t !== b.dataset.tab;
   try { localStorage.setItem("tab", b.dataset.tab); } catch(e){}
 }));
 try { const t = localStorage.getItem("tab"); if (t) document.querySelector(`nav button[data-tab="${t}"]`)?.click(); } catch(e){}
