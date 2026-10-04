@@ -66,7 +66,13 @@ _MIN = r"(\d+)\s*(?:min\b|minutes?\b)"
 
 
 def _secs(m: re.Match, unit_minutes: bool) -> int:
-    return int(m.group(1)) * (60 if unit_minutes else 1)
+    return int(m.group(m.lastindex)) * (60 if unit_minutes else 1)
+
+
+def _tighten(raw: dict, key: str, value: int) -> None:
+    """Meerdere duurregels in een brief: de strengste geldt (hoogste minimum, laagste maximum)."""
+    cur = raw[key]
+    raw[key] = value if cur is None else (max(cur, value) if key == "min_duration" else min(cur, value))
 
 
 def parse_rules_regex(text: str) -> dict:
@@ -81,15 +87,29 @@ def parse_rules_regex(text: str) -> dict:
         m = re.search(r"between\s+(\d+)\s*(?:-|–|and|to)\s*(\d+)\s*(s\b|sec|seconds?|min)", low)
         if m:
             f = 60 if m.group(3) == "min" else 1
-            raw["min_duration"], raw["max_duration"] = int(m.group(1)) * f, int(m.group(2)) * f
+            _tighten(raw, "min_duration", int(m.group(1)) * f)
+            _tighten(raw, "max_duration", int(m.group(2)) * f)
         else:
             for pat, minutes in ((_SEC, False), (_MIN, True)):
                 mx = re.search(r"(?:max(?:imum)?|up to|no longer than|at most|under|shorter than|not (?:exceed|longer than|more than))\D{0,20}?" + pat, low)
-                mn = re.search(r"(?:min(?:imum)?|at least|no shorter than|longer than|not (?:shorter|less) than)\D{0,20}?" + pat, low)
+                mn = re.search(r"(?P<lead>min(?:imum)?|at least|no shorter than|longer than|more than|not (?:shorter|less) than)\D{0,20}?" + pat, low)
                 if mx:
-                    raw["max_duration"] = _secs(mx, minutes)
-                if mn:
-                    raw["min_duration"] = _secs(mn, minutes)
+                    _tighten(raw, "max_duration", _secs(mx, minutes))
+                if mn:  # "longer than 15 s" betekent minstens 16 s
+                    strict = mn.group("lead") in ("longer than", "more than")
+                    _tighten(raw, "min_duration", _secs(mn, minutes) + (1 if strict else 0))
+            for m in re.finditer(r"(\d+)\s*(?:s\b|sec|seconds?)\s+or\s+(?:shorter|less)", low):
+                _tighten(raw, "min_duration", int(m.group(1)) + 1)  # "10 seconds or shorter" is verboden
+        # verplichte caption-tekst: Use the required caption: "..."
+        m = re.search(r"(?:required|mandatory|use|include|add)\s+(?:the\s+|this\s+)?(?:required\s+)?(?:caption|description|text)[^\"“'‘]{0,20}[\"“'‘]([^\"”'’]+)[\"”'’]", line, re.I)
+        if m and not neg:
+            raw["required_caption_text"].append(m.group(1).strip())
+        # platforms
+        if "platform" in low:
+            for key, pats in (("tiktok", ("tiktok",)), ("instagram", ("instagram", "reels")),
+                              ("youtube", ("youtube", "shorts"))):
+                if any(x in low for x in pats):
+                    raw["platforms"].append(key)
         # tags / mentions
         tags, ments = re.findall(r"#\w+", line), re.findall(r"@\w+", line)
         if tags or ments:
@@ -124,9 +144,10 @@ def parse_rules_regex(text: str) -> dict:
         m = re.search(r"\b(?:show|display|overlay|put|add|include)\b.*?[\"“'‘]([^\"”'’]+)[\"”'’].*?\b(?:on[- ]screen|in the video|in the clip|on the video|throughout)", line, re.I)
         if m and not neg:
             raw["on_screen_text"].append(m.group(1).strip())
-        if re.search(r"\b(must|should|required|do not|don't|never|always|avoid|show|display)\b", low):
-            raw["notes"].append(line.strip(" -*•\t"))
-    for k in ("banned_words", "required_hashtags", "required_mentions", "on_screen_text"):
+        if re.search(r"\b(must|should|required|do not|don't|never|always|avoid|show|display|pick|start with|"
+                     r"only|no watermarks?|rejected)\b", low) and not line.lstrip().startswith(("❌", "✅", "💡")):
+            raw["notes"].append(re.sub(r"\s{2,}", " ", line.strip(" -*•\t")))
+    for k in ("banned_words", "required_hashtags", "required_mentions", "on_screen_text", "required_caption_text", "platforms", "notes"):
         raw[k] = list(dict.fromkeys(raw[k]))
     return _clean(raw)
 

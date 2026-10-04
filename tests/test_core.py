@@ -217,3 +217,25 @@ def test_on_screen_text_rule_is_parsed_and_rendered():
     cfg = load_config()
     ass = build_ass(make_words()[:3], 0.0, cfg["captions"], cfg["video"], tag="#ad")
     assert "Tag,,0,0,0,,#ad" in ass
+
+
+def test_real_brief_ranch_pdf():
+    import shutil
+    import pytest
+    if not shutil.which("pdftotext"):
+        pytest.skip("pdftotext ontbreekt")
+    from autoclip.rules import apply_to_config, parse_rules_regex, read_document
+    r = parse_rules_regex(read_document("examples/ranch_brief.pdf"))
+    assert r["min_duration"] == 16  # strengste regel: 'langer dan 15 s' (niet 10)
+    assert r["required_caption_text"] == ["Jake Paul On YouTube"]
+    assert set(r["platforms"]) == {"tiktok", "instagram", "youtube"}
+    assert any("captions" in n.lower() for n in r["notes"])
+    assert any("watermark" in n.lower() for n in r["notes"])
+    cfg = apply_to_config(load_config(), r)
+    assert cfg["min_duration"] == 16 and cfg["platform"] == "tiktok"
+
+
+def test_strictest_duration_wins():
+    from autoclip.rules import parse_rules_regex
+    r = parse_rules_regex("- Must be longer than 10 seconds\n- Every clip longer than 15 seconds\n- Max 60 seconds\n- Up to 45 seconds")
+    assert (r["min_duration"], r["max_duration"]) == (16, 45)
