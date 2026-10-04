@@ -19,3 +19,12 @@ Bron: 169 posts van @clip_tt456 via Metricool (11 aug – 4 okt 2026) plus de ee
 
 ## Open vragen
 - Welke hook-types (stelling, getal, vraag, citaat) komen boven de 1.058 views uit? Nog te weinig data uit deze campagne.
+
+## Wijzigingen in versie 2 (4 okt)
+Reden: clip 1 haalde 90 views en het account zit rond 784 per post. Aangepast voor clips 2–7:
+- Hooktekst (gele balk) in de eerste 2,8 s met de kern van de clip.
+- Pauzes langer dan 0,45 s weggeknipt (jump cuts), om-en-om inzoom om het beeld te laten wisselen.
+- Woord-voor-woord captions met het gesproken woord in geel, grotere letters.
+- Geluid genormaliseerd naar -14 LUFS.
+- Nieuwe momenten gekozen met een cijfer of tegenstelling in de eerste zin (90% → 1%, 7 uit 1.000, TNT → kernbrandstof, 10% van alle stroom). De Atlas Shrugged-wandeling is vervangen omdat die geen stellige eerste zin had.
+Nog niet bewezen dat dit meer views geeft. Vergelijk na het posten de nieuwe clips met clip 1 en met de mediaan van 784.

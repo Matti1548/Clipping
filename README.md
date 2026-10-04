@@ -15,7 +15,7 @@
 ## Campagnes
 | Campagne | Bron | Clips | Gepost |
 |---|---|---|---|
-| Jake Paul – I Went Inside a Nuclear Factory | General Matter_v7(1).mp4 | 7 | 1 van 7 |
+| Jake Paul – I Went Inside a Nuclear Factory | General Matter_v7(1).mp4 | 7 (clips 2–7 versie 2) | 1 van 7 |
 
 ## Nieuwe campagne starten
 Open een nieuwe sessie op deze repo en stuur de brief en de videolink (of gebruik het tabblad *Nieuwe aanvraag* in Clip Studio). Claude volgt `CLAUDE.md` en `LEERPUNTEN.md` en zet alles in `campaigns/<naam>/`.
