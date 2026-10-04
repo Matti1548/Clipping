@@ -6,6 +6,7 @@ import re
 from .audio import mean_energy
 from .jumpcut import is_filler
 from .models import Highlight, Word
+from .rules import banned_hits, rules_for_prompt
 from .sentences import sentence_spans, snap_to_sentences
 
 PROMPT = """You are an expert editor of viral short-form video (TikTok, YouTube Shorts, Reels).
@@ -19,6 +20,8 @@ sponsor reads and filler talk.
 Reply with ONLY a JSON list of objects:
 {{"start": <sec>, "end": <sec>, "score": <0-10>, "reason": "<short reason>",
   "hook": "<on-screen hook text, max 8 words, written to stop the scroll>"}}
+
+{rules}
 
 Transcript:
 {transcript}
@@ -51,7 +54,7 @@ def _llm(words: list[Word], cfg: dict) -> list[Highlight]:
     # 2x kandidaten opvragen; de beste n blijven over na snappen en ontdubbelen
     import anthropic
 
-    prompt = PROMPT.format(ctype=cfg.get("content_type", "general"), criteria=cfg.get("criteria", ""),
+    prompt = PROMPT.format(ctype=cfg.get("content_type", "general"), criteria=cfg.get("criteria", ""), rules=rules_for_prompt(cfg.get("rules")),
                            n=cfg["clips"] * 2, lo=cfg["min_duration"], hi=cfg["max_duration"],
                            transcript=build_transcript(words))
     resp = anthropic.Anthropic().messages.create(

@@ -123,3 +123,97 @@ def test_ass_wraps_long_hook():
     cfg = load_config()
     ass = build_ass(make_words()[:3], 0.0, cfg["captions"], cfg["video"], hook="a very long hook text " * 3)
     assert "WrapStyle: 0" in ass  # smart wrap, zodat de hook niet buiten beeld valt
+
+
+# ---------- campagneregels & achtergrond ----------
+SAMPLE = open("examples/campaign_novafit.md").read()
+
+
+def test_parse_rules_regex():
+    from autoclip.rules import parse_rules_regex
+    r = parse_rules_regex(SAMPLE)
+    assert (r["min_duration"], r["max_duration"], r["max_hashtags"]) == (20, 45, 5)
+    assert r["required_hashtags"] == ["#NovaFitPartner", "#ad"] and r["required_mentions"] == ["@novafit"]
+    assert set(r["banned_words"]) == {"fitbrand", "gympro"}
+    assert r["allow_music"] is None  # 'copyrighted music' gaat over rechten, niet over muziek verbieden
+    assert r["allow_background"] is True
+    from autoclip.rules import parse_rules_regex as p
+    assert p("- No music allowed in the video.")["allow_music"] is False
+
+
+def test_read_docx(tmp_path):
+    import zipfile
+    from autoclip.rules import read_document
+    f = tmp_path / "brief.docx"
+    with zipfile.ZipFile(f, "w") as z:
+        z.writestr("word/document.xml", "<w:p><w:r><w:t>Max 30 seconds</w:t></w:r></w:p><w:p><w:r><w:t>No music</w:t></w:r></w:p>")
+    assert read_document(str(f)).splitlines()[:2] == ["Max 30 seconds", "No music"]
+
+
+def test_apply_to_config_clamps_duration():
+    from autoclip.rules import apply_to_config, parse_rules_regex
+    cfg = apply_to_config(load_config(), parse_rules_regex(SAMPLE))
+    assert (cfg["min_duration"], cfg["max_duration"]) == (20, 45)
+    c2 = apply_to_config(load_config(), parse_rules_regex("- Clips under 12 seconds"))
+    assert c2["max_duration"] == 12 and c2["min_duration"] < 12
+
+
+def test_enforce_metadata_and_compliance():
+    from autoclip.models import ClipMeta
+    from autoclip.rules import check_compliance, enforce_metadata, parse_rules_regex
+    r = parse_rules_regex(SAMPLE)
+    m = enforce_metadata(ClipMeta("Why FitBrand fails", "Better than GymPro!", ["#fyp", "#gym", "#a", "#b", "#c", "#d"]), r)
+    assert "fitbrand" not in m.title.lower() and "gympro" not in m.caption.lower()
+    assert m.hashtags[:2] == ["#NovaFitPartner", "#ad"] and len(m.hashtags) == 5
+    assert "@novafit" in m.caption
+    rep = check_compliance(r, duration=30, spoken="hello", meta=m, music=None, background=None, on_screen=["#ad"])
+    assert rep["compliant"] and any(c["ok"] is None for c in rep["checks"])  # notes = handmatig
+    bad = check_compliance(r, duration=60, spoken="try fitbrand", meta=m, music=None, background=None, on_screen=[])
+    assert not bad["compliant"]
+
+
+def test_banned_sentence_is_cut_out_of_the_clip():
+    from autoclip.jumpcut import keep_segments, remap_words
+    from autoclip.pipeline import banned_sentence_words
+    from autoclip.rules import parse_rules_regex
+    ws = make_words()
+    ws[15] = Word("FitBrand", ws[15].start, ws[15].end)  # verboden woord in zin 2 (10-20s)
+    rules = parse_rules_regex("- Do not say FitBrand.")
+    ids = banned_sentence_words(ws, rules)
+    assert len(ids) == 10
+    drop = lambda w: id(w) in ids
+    segs = keep_segments(ws, 0, 30, max_gap=0.5, drop=drop)
+    assert len(segs) == 2 and segs[0][1] <= 10.0 and segs[1][0] >= 19.9  # zin 2 volledig weg, ook de padding
+    kept = remap_words(ws, segs, drop=drop)
+    assert len(kept) == 20 and all(w.text != "FitBrand" for w in kept)
+
+
+def test_background_decision_respects_rules(tmp_path, monkeypatch):
+    from autoclip.background import decide
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    (tmp_path / "m.mp3").write_bytes(b"x")
+    cfg = load_config(None, {"background": {"music_dir": str(tmp_path), "video_dir": str(tmp_path)}})
+    allowed = decide("hello there", "vlog", "crop", None, cfg)
+    assert allowed["music"] and allowed["background"] is None
+    forbidden = decide("hello there", "vlog", "crop", {"allow_music": False, "allow_background": None, "notes": []}, cfg)
+    assert forbidden["music"] is None and "niet toegestaan" in forbidden["reason"]
+    assert decide("hello", "podcast", "crop", None, cfg)["music"] is None  # stem staat centraal
+    off = load_config(None, {"background": {"enabled": False, "music_dir": str(tmp_path)}})
+    assert decide("hello", "vlog", "crop", None, off)["music"] is None
+
+
+def test_filter_graph_music_and_background():
+    from autoclip.render import build_filter
+    v = dict(load_config()["video"], layout="fit_blur")
+    g = build_filter([(0, 5), (7, 10)], "x.ass", [], v, music_idx=2, bg_idx=1)
+    assert "sidechaincompress" in g and "[1:v]" in g and "[2:a]" in g
+    assert "boxblur" in build_filter([(0, 5)], "x.ass", [], v)
+
+
+def test_on_screen_text_rule_is_parsed_and_rendered():
+    from autoclip.rules import parse_rules_regex
+    r = parse_rules_regex('- Show "#ad" on screen during the whole clip.')
+    assert r["on_screen_text"] == ["#ad"] and r["notes"]
+    cfg = load_config()
+    ass = build_ass(make_words()[:3], 0.0, cfg["captions"], cfg["video"], tag="#ad")
+    assert "Tag,,0,0,0,,#ad" in ass

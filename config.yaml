@@ -37,3 +37,14 @@ captions:
 # profiles:
 #   gaming:
 #     captions: {words_per_line: 1, size: 110}
+
+# Campagneregels (pdf / docx / md / txt); ook via --rules
+rules_file: null
+
+# Achtergrond (muziek en/of achtergrondbeeld) wordt alleen toegevoegd als de regels het toestaan
+# en het de clip beter maakt. Gebruik alleen bestanden waar je de rechten van hebt.
+background:
+  enabled: true
+  music_dir: assets/music
+  video_dir: assets/backgrounds
+  music_volume: 0.12

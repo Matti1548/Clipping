@@ -17,11 +17,24 @@ def main() -> None:
     p.add_argument("--type", dest="content_type",
                    choices=["auto", "podcast", "interview", "gaming", "vlog", "educational", "general"])
     p.add_argument("--platform", choices=["tiktok", "youtube", "instagram"])
+    p.add_argument("--rules", help="campagne-regels (pdf/docx/md/txt)")
+    p.add_argument("--music-dir")
+    p.add_argument("--backgrounds-dir")
+    p.add_argument("--no-background", action="store_true", help="nooit muziek/achtergrond toevoegen")
     a = p.parse_args()
     over = {"clips": a.clips, "language": a.language, "platform": a.platform, "content_type": a.content_type}
     if a.duration:
         over.update(max_duration=a.duration, min_duration=int(a.duration * 0.6))
-    run(a.source, a.out, load_config(a.config, over))
+    cfg = load_config(a.config, over)
+    if a.rules:
+        cfg["rules_file"] = a.rules
+    if a.music_dir:
+        cfg["background"]["music_dir"] = a.music_dir
+    if a.backgrounds_dir:
+        cfg["background"]["video_dir"] = a.backgrounds_dir
+    if a.no_background:
+        cfg["background"]["enabled"] = False
+    run(a.source, a.out, cfg)
 
 
 if __name__ == "__main__":

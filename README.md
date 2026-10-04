@@ -11,6 +11,20 @@ transcriptie (faster-whisper) → highlight-detectie (Claude, of heuristiek zond
 ## Editing
 Pauzes en opvulwoorden (um/uh) worden weggeknipt, dynamische gezichtstracking, punch-in zoom per knip, voortgangsbalk, hook-titel, loudnorm. Standaardtaal is Engels (`--language`).
 
+## Campagneregels
+Geef het regeldocument mee (pdf, docx, md of txt):
+
+    python clip.py video.mp4 --rules brief.pdf
+
+Het document wordt omgezet naar gestructureerde regels (Claude, of zonder API-sleutel een regex-parser voor standaardformuleringen; zie `examples/campaign_novafit.md`). Controleer altijd `output/rules_parsed.json`. Daarna:
+- **Duur** blijft binnen de toegestane min/max (ook na het inkorten van pauzes).
+- **Verboden woorden:** de zin waarin ze worden uitgesproken wordt uit de clip geknipt en uit titel/caption/hashtags gehaald.
+- **Verplicht:** hashtags, vermeldingen, caption-tekst en tekst in beeld (bv. `#ad`) worden toegevoegd; max. aantal hashtags wordt bewaakt.
+- **Rapport per clip** in `clip_XX.json` (`compliance`): ✓ gehaald, ✗ overtreden, ? handmatig controleren (regels die niet automatisch te toetsen zijn, zoals toon of "geen medische claims").
+
+## Achtergrond (muziek en beeld)
+Alleen als de regels het niet verbieden **en** het de clip beter maakt (Claude beslist; spraakgedreven content zoals podcasts krijgt geen muziek). Muziek ligt zacht onder de stem en zakt automatisch als er gesproken wordt. Achtergrondbeeld wordt alleen gebruikt bij de `fit_blur`-layout. Zet je eigen, rechtenvrije bestanden in `assets/music/` en `assets/backgrounds/` (of `--music-dir`, `--backgrounds-dir`); `--no-background` zet het uit.
+
 ## Installeren
 Vereist Python 3.10+ en `ffmpeg`.
 
