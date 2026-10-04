@@ -1,0 +1,13 @@
+{
+  "bron": "/pad/naar/src.mp4",
+  "crop": {"breedte": 1040, "hoogte": 1850},
+  "clips": [
+    {"naam": "01_nuclear_hook", "start": 0.0, "einde": 22.8, "x": 1400, "titel": "The real nuclear threat to America isn't what you think"},
+    {"naam": "02_amerika_verloor_controle", "start": 172.2, "einde": 198.6, "x": 1400, "titel": "America used to enrich 90% of the world's uranium. Now it's under 1%"},
+    {"naam": "03_marbles_uitleg", "start": 240.9, "einde": 263.3, "x": 1400, "titel": "Uranium enrichment explained with a jar of marbles"},
+    {"naam": "04_nucleair_is_veilig", "start": 109.75, "einde": 129.4, "x": 1400, "titel": "Is nuclear actually dangerous? The answer might surprise you"},
+    {"naam": "05_atlas_shrugged_paducah", "start": 297.25, "einde": 328.1, "x": 1300, "titel": "Jake Paul walks inside a former nuclear plant"},
+    {"naam": "06_hoogste_energie_concentratie", "start": 211.2, "einde": 238.4, "x": 1400, "titel": "This plant once used 10% of all U.S. electricity"},
+    {"naam": "07_never_again_slot", "start": 358.3, "einde": 391.8, "x": 1400, "titel": "\"America gave this away once and we're not doing it again\""}
+  ]
+}
