@@ -11,7 +11,8 @@ DEFAULTS = {
     "max_duration": 60,
     "platform": "tiktok",
     "llm": {"model": "claude-sonnet-5-5"},
-    "video": {"width": 1080, "height": 1920, "fps": 30, "face_tracking": True},
+    "video": {"width": 1080, "height": 1920, "fps": 30, "face_tracking": True,
+              "tighten_pauses": True, "max_pause": 0.5},
     "captions": {
         "font": "Arial",
         "size": 84,

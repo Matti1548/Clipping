@@ -62,3 +62,14 @@ def test_ass_dialogue_matches_event_format():
     for line in (l for l in ass.splitlines() if l.startswith("Dialogue:")):
         assert len(line.split(":", 1)[1].split(",", n_fields - 1)) == n_fields
         assert not line.split(",", n_fields - 1)[-1].startswith("0,")
+
+
+def test_keep_segments_cuts_long_pauses():
+    from autoclip.jumpcut import keep_segments, remap_words
+    ws = [Word("a", 0, 1), Word("b", 1.1, 2), Word("c", 5, 6)]  # pauze van 3s voor "c"
+    segs = keep_segments(ws, 0, 6, max_gap=0.5, pad=0.1)
+    assert len(segs) == 2
+    total = sum(b - a for a, b in segs)
+    assert total < 4.5  # was 6s
+    new = remap_words(ws, segs)
+    assert len(new) == 3 and new[2].start < 3.0 and new[2].start >= new[1].end

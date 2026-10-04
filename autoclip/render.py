@@ -6,17 +6,25 @@ def _esc_filter_path(p: str) -> str:
     return p.replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
 
 
-def render_clip(video: str, start: float, end: float, ass_path: str, out: str,
+def render_clip(video: str, segs: list[tuple[float, float]], ass_path: str, out: str,
                 face_x: float, vcfg: dict) -> None:
-    """Knip, crop naar 9:16 rond het gezicht, schaal en brand de captions in."""
+    """Knip segmenten, plak ze aan elkaar, crop naar 9:16 rond het gezicht, brand captions in."""
     w, h, fps = vcfg["width"], vcfg["height"], vcfg["fps"]
     x_expr = f"max(0,min(iw-ow,{face_x:.4f}*iw-ow/2))"
-    vf = (f"crop=w='min(iw,ih*{w}/{h})':h=ih:x='{x_expr}':y=0,"
-          f"scale={w}:{h}:flags=lanczos,setsar=1,fps={fps},"
-          f"ass='{_esc_filter_path(ass_path)}'")
-    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{start:.3f}", "-to", f"{end:.3f}",
-           "-i", video, "-vf", vf, "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-           "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out]
+    parts, labels = [], ""
+    for i, (a, b) in enumerate(segs):
+        parts.append(f"[0:v]trim={a:.3f}:{b:.3f},setpts=PTS-STARTPTS[v{i}]")
+        parts.append(f"[0:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS[a{i}]")
+        labels += f"[v{i}][a{i}]"
+    parts.append(f"{labels}concat=n={len(segs)}:v=1:a=1[cv][ca]")
+    parts.append(f"[cv]crop=w='min(iw,ih*{w}/{h})':h=ih:x='{x_expr}':y=0,"
+                 f"scale={w}:{h}:flags=lanczos,setsar=1,fps={fps},"
+                 f"ass='{_esc_filter_path(ass_path)}'[vout]")
+    parts.append("[ca]loudnorm=I=-14:TP=-1.5:LRA=11[aout]")
+    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-filter_complex", ";".join(parts),
+           "-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+           "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-ar", "44100",
+           "-movflags", "+faststart", out]
     subprocess.run(cmd, check=True)
 
 

@@ -19,7 +19,8 @@ def _esc(text: str, upper: bool) -> str:
     return text.replace("\\", "").replace("{", "(").replace("}", ")")
 
 
-def build_ass(words: list[Word], clip_start: float, cfg: dict, video: dict) -> str:
+def build_ass(words: list[Word], clip_start: float, cfg: dict, video: dict,
+              hook: str = "", hook_secs: float = 3.0) -> str:
     c = cfg
     primary, hl, outline = (_ass_color(c["primary_color"]), _ass_color(c["highlight_color"]),
                             _ass_color(c["outline_color"]))
@@ -31,6 +32,7 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Hook,{c['font']},{int(c['size']*0.75)},{primary},{primary},{outline},&H99000000,1,0,0,0,100,100,0,0,3,{c['outline']//2},0,8,80,80,260,1
 Style: Cap,{c['font']},{c['size']},{primary},{primary},{outline},&H00000000,1,0,0,0,100,100,0,0,1,{c['outline']},2,2,60,60,{c['margin_bottom']},1
 
 [Events]
@@ -48,4 +50,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 txt = _esc(o.text, c["uppercase"])
                 parts.append(f"{{\\c{hl}}}{txt}{{\\c{primary}}}" if k == j else txt)
             lines.append(f"Dialogue: 0,{_ts(start)},{_ts(end)},Cap,,0,0,0,,{' '.join(parts)}")
+    if hook:
+        lines.insert(0, f"Dialogue: 1,{_ts(0)},{_ts(hook_secs)},Hook,,0,0,0,,{_esc(hook, c['uppercase'])}")
     return head + "\n".join(lines) + "\n"
