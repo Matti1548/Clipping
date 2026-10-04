@@ -1,0 +1,27 @@
+# Auto-clip configuratie
+language: null            # bv. "nl" of "en"; null = automatisch detecteren
+whisper_model: small      # tiny | base | small | medium | large-v3
+clips: 5
+min_duration: 15          # seconden
+max_duration: 60
+platform: tiktok          # tiktok | youtube | instagram
+
+llm:
+  model: claude-sonnet-5-5   # API-sleutel via env ANTHROPIC_API_KEY; zonder sleutel -> heuristiek
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  face_tracking: true
+
+captions:
+  font: Arial
+  size: 84
+  primary_color: "#FFFFFF"
+  highlight_color: "#FFE600"
+  outline_color: "#000000"
+  outline: 6
+  words_per_line: 3
+  margin_bottom: 420     # veilige zone onder (UI van TikTok/Shorts)
+  uppercase: true
